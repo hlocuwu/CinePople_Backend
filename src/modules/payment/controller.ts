@@ -107,3 +107,18 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
     next(error);
   }
 };
+
+export const handleMomoWebhook = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await paymentService.handleMomoCallback(req.body);
+    // Momo cần status 204
+    if (result.status === 204) {
+        res.status(204).send();
+    } else {
+        res.status(result.status).json(result);
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).send();
+  }
+};
