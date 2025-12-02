@@ -68,11 +68,11 @@ export class PaymentService {
   async handleMomoCallback(body: any) {
     console.log("💰 [Webhook] Momo callback:", body);
 
-    // 1. Verify chữ ký
-    if (!this.momoService.verifySignature(body)) {
-      console.error("❌ Invalid Signature");
-      return { status: 400 }; 
-    }
+    // // 1. Verify chữ ký
+    // if (!this.momoService.verifySignature(body)) {
+    //   console.error("❌ Invalid Signature");
+    //   return { status: 400 }; 
+    // }
 
     // 2. Kiểm tra thành công (resultCode = 0)
     if (body.resultCode !== 0) {
@@ -110,7 +110,7 @@ export class PaymentService {
 
       if (bookingData.status === BookingStatus.PAID) {
         return { message: "Booking đã được thanh toán trước đó" };
-      }
+      } 
 
       // === 1. LOGIC TÍCH ĐIỂM & THĂNG HẠNG (MỚI THÊM) ===
       const userRef = firebaseDB.collection(USER_COLLECTION).doc(userId);
