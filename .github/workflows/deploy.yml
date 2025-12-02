@@ -88,13 +88,8 @@ jobs:
       with:
         version: 'v3.11.1'
 
-    - name: Deploy to AKS using Helm
-      # QUAN TRỌNG:
-      # 1. image.tag=latest
-      # 2. podAnnotations.rollme=$(date +%s): Bắt buộc phải có dòng này để ép Kubernetes restart Pod 
-      #    vì tag 'latest' không thay đổi nên K8s sẽ tưởng không có gì mới.
+    - name: Deploy to AKS using Helm.
       run: |
         helm upgrade --install cine-release ./infra/helm/cine-chart \
           --set image.repository=${{ secrets.ACR_NAME }}.azurecr.io/cine-backend \
           --set image.tag=latest \
-          --set podAnnotations.rollme=$(date +%s)
