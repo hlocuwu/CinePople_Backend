@@ -1,0 +1,82 @@
+./
+├─ .dockerignore
+├─ .env
+├─ .env.example
+├─ .git/
+├─ .gitignore
+├─ docker-compose.yaml
+├─ Dockerfile
+├─ nt118-8452f-firebase-adminsdk-fbsvc-8342f8803e.json
+├─ package-lock.json
+├─ package.json
+├─ README.md
+├─ tsconfig.json
+└─ src/
+   ├─ app.ts
+   ├─ server.ts
+   ├─ config/
+   │  ├─ env.ts
+   │  ├─ firebase.ts
+   │  ├─ passport.ts
+   │  └─ swagger.ts
+   ├─ middleware/
+   │  ├─ auth.ts
+   │  └─ error.ts
+   ├─ modules/
+   │  ├─ auth/
+   │  │  ├─ controller.ts
+   │  │  ├─ dto.ts
+   │  │  ├─ routes.ts
+   │  │  └─ service.ts
+   │  ├─ booking/
+   │  │  ├─ controller.ts
+   │  │  ├─ dto.ts
+   │  │  ├─ service.ts
+   │  │  ├─ types.ts
+   │  │  └─ routes.ts
+   │  ├─ movie/
+   │  │  ├─ controller.ts
+   │  │  ├─ dto.ts
+   │  │  ├─ service.ts
+   │  │  ├─ types.ts
+   │  │  └─ routes.ts
+   │  ├─ cinema/
+   │  │  ├─ controller.ts
+   │  │  ├─ dto.ts
+   │  │  ├─ service.ts
+   │  │  ├─ types.ts
+   │  │  └─ routes.ts
+   │  ├─ showtime/
+   │  │  ├─ controller.ts
+   │  │  ├─ dto.ts
+   │  │  ├─ service.ts
+   │  │  ├─ types.ts
+   │  │  └─ routes.ts
+   │  ├─ seat/
+   │  │  ├─ controller.ts
+   │  │  ├─ dto.ts
+   │  │  ├─ service.ts
+   │  │  ├─ types.ts
+   │  │  └─ routes.ts
+   │  ├─ region/
+   │  │  ├─ controller.ts
+   │  │  ├─ dto.ts
+   │  │  ├─ service.ts
+   │  │  ├─ types.ts
+   │  │  └─ routes.ts
+   │  ├─ payment/
+   │  │  ├─ controller.ts
+   │  │  ├─ dto.ts
+   │  │  ├─ service.ts
+   │  │  └─ routes.ts
+   │  ├─ test/
+   │  │  ├─ controller.ts
+   │  │  └─ routes.ts
+   │  ├─ ticket/ (no files listed)
+   │  └─ user/
+   │     ├─ controller.ts
+   │     └─ routes.ts
+   └─ utils/
+      ├─ jwt.ts
+      ├─ otp.ts
+      └─ qrcode.ts
