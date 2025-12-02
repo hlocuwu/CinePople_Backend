@@ -84,6 +84,21 @@ spec:
           volumeMounts:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+        - name: ngrok-sidecar
+          image: ngrok/ngrok:alpine
+          args:
+            - "http"
+            - "{{ .Values.service.targetPort }}" 
+          env:
+            - name: NGROK_AUTHTOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.ngrok.secretName }} 
+                  key: NGROK_AUTHTOKEN
+          ports:
+            - containerPort: 4040
+              name: dashboard
+
       {{- with .Values.volumes }}
       volumes:
         {{- toYaml . | nindent 8 }}

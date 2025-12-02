@@ -13,7 +13,7 @@ export class MomoService {
 
   // QUAN TRỌNG: Đây là đường dẫn Momo sẽ gọi về khi thanh toán xong
   // Hardcode IP Public để test nhanh (Thay vì dùng env)
-  private ipnUrl = "http://135.171.171.14/api/payment/webhook/momo";
+  private ipnUrl = "https://stringily-riverine-jerrie.ngrok-free.dev/api/payment/webhook/momo";
   
   // URL Redirect: Quay về App sau khi thanh toán xong
   private redirectUrl = "cinebooking://payment-result";

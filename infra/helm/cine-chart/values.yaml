@@ -168,3 +168,6 @@ env:
   FIREBASE_STORAGE_BUCKET: "nt118-8452f.appspot.com"
 
 existingSecretName: "cine-backend-secrets"
+ngrok:
+  enabled: true
+  secretName: "ngrok-secret"
