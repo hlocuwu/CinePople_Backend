@@ -17,10 +17,8 @@ import { setupSwagger } from "./config/swagger";
 
 const app = express();
 
-// Parse JSON
 app.use(express.json());
 
-// ⭐ FIX CORS CHUẨN CHO EXPRESS 5
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -29,7 +27,6 @@ app.use(cors({
   optionsSuccessStatus: 204,
 }));
 
-// ⭐ CUSTOM PRE-FLIGHT HANDLER (KHẮC PHỤC LỖI "*")
 app.use((req, res, next) => {
   if (req.method === "OPTIONS") {
     return res.sendStatus(204);
@@ -47,7 +44,6 @@ app.use(session({
 
 setupSwagger(app);
 
-// Health checks
 app.get("/", (_req, res) => res.json({ message: "Ciné API running" }));
 app.get("/health", (_req, res) => res.sendStatus(200));
 
