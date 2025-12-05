@@ -1,3 +1,4 @@
+import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
@@ -14,7 +15,9 @@ import reviewRoutes from "./modules/review/routes"
 import voucherRoutes from "./modules/voucher/routes"
 import session from "express-session";
 import { setupSwagger } from "./config/swagger";
+import assistantRouter from "./modules/assistant/routes";
 
+dotenv.config();
 const app = express();
 
 app.use(express.json());
@@ -59,5 +62,10 @@ app.use("/api/showtimes", showtimeRouters);
 app.use("/api/payment", paymentRouters);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/vouchers", voucherRoutes);
+app.use("/api/assistant", assistantRouter);
+
+console.log("🔥 PRIVATE KEY LENGTH =", process.env.FIREBASE_PRIVATE_KEY?.length);
+console.log("🔥 PROJECT ID =", process.env.FIREBASE_PROJECT_ID);
+console.log("🔥 CLIENT EMAIL =", process.env.FIREBASE_CLIENT_EMAIL);
 
 export default app;

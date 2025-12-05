@@ -18,14 +18,14 @@ export class MovieService {
     return snapshot.docs.map((doc) => {
       const data = doc.data() as MovieDocument;
       const movie = { id: doc.id, ...data } as Movie;
-      
+
       // Logic ưu tiên: Nếu có field status trong DB thì dùng, nếu không thì tính theo ngày
       let computedStatus = movie.status || 'coming_soon';
 
       if (!movie.status && movie.releaseDate) {
-          const releaseDate = new Date(movie.releaseDate);
-          // Nếu ngày phát hành <= hiện tại => Đang chiếu
-          computedStatus = releaseDate <= now ? "now_showing" : "coming_soon";
+        const releaseDate = new Date(movie.releaseDate);
+        // Nếu ngày phát hành <= hiện tại => Đang chiếu
+        computedStatus = releaseDate <= now ? "now_showing" : "coming_soon";
       }
 
       return { ...movie, computedStatus };
@@ -56,7 +56,7 @@ export class MovieService {
     const ref = await moviesCollection.add(movieDoc);
     // Update ngược lại ID vào doc để tiện query phía client (nếu cần)
     await ref.update({ id: ref.id });
-    
+
     return { id: ref.id, ...movieDoc } as Movie;
   }
 
@@ -68,12 +68,12 @@ export class MovieService {
     // Loại bỏ undefined values
     const updateData: any = { ...dto };
     Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
-    
+
     updateData.updatedAt = Timestamp.now();
 
     await ref.update(updateData);
     const updatedSnap = await ref.get();
-    
+
     return { id: updatedSnap.id, ...updatedSnap.data() } as Movie;
   }
 
@@ -84,5 +84,21 @@ export class MovieService {
 
     await ref.delete();
     return { id, message: "Movie deleted successfully" };
+  }
+
+  /**
+   * Lấy danh sách tất cả phim (cho AI Assistant)
+   */
+  async getMovies(): Promise<Movie[]> {
+    try {
+      const snapshot = await moviesCollection.orderBy('createdAt', 'desc').get();
+      return snapshot.docs.map((doc) => {
+        return { id: doc.id, ...doc.data() } as Movie;
+      });
+    } catch (error) {
+      console.error('Error fetching movies:', error);
+      // Fallback: return empty array if there's an error (e.g., missing index)
+      return [];
+    }
   }
 }

@@ -173,11 +173,11 @@ export const getShowtimes = async (req: Request, res: Response, next: NextFuncti
     }
 
     const data = await showtimeService.getShowtimes(
-      movieId as string, 
-      regionId as string, 
+      movieId as string,
+      regionId as string,
       date as string
     );
-    
+
     res.status(200).json({ success: true, data });
   } catch (error) {
     next(error);
@@ -213,11 +213,28 @@ export const getShowtimes = async (req: Request, res: Response, next: NextFuncti
  *       404:
  *         description: Không tìm thấy suất chiếu
  */
+
+export const getAllShowtimes = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { movieId, cinemaId, date, regionId } = req.query;
+
+    const data = await showtimeService.getShowtimes(
+      movieId as string,
+      regionId as string,
+      date as string
+    );
+
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getShowtimeById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const showtime = await showtimeService.getShowtimeById(id);
-    
+
     if (!showtime) throw new ApiError(404, 'Không tìm thấy suất chiếu');
 
     res.status(200).json({ success: true, data: showtime });
@@ -268,3 +285,4 @@ export const createShowtime = async (req: Request, res: Response, next: NextFunc
     next(error);
   }
 };
+

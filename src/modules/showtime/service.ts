@@ -113,19 +113,19 @@ export class ShowtimeService {
     const newShowtime: ShowtimeDocument = {
       movieId: dto.movieId,
       movieTitle: movieData?.title || "Unknown Movie",
-      
+
       cinemaId: dto.cinemaId,
       cinemaName: cinemaData?.name || "Unknown Cinema",
       regionId: cinemaData?.regionId || "", // Quan trọng: Lưu regionId từ rạp sang
-      
+
       roomName: dto.roomName,
       startTime: Timestamp.fromDate(startTimeDate),
       endTime: Timestamp.fromDate(endTimeDate),
-      
+
       seatMap: seatMap,
       totalSeats: totalSeats,
       availableSeats: totalSeats,
-      
+
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     };
@@ -133,5 +133,19 @@ export class ShowtimeService {
     const ref = await this.collection.add(newShowtime);
     const newDoc = await ref.get();
     return this.toShowtime(newDoc);
+  }
+
+  /**
+   * Lấy danh sách tất cả suất chiếu (cho AI Assistant)
+   */
+  async getAllShowtimes(): Promise<Showtime[]> {
+    try {
+      const snapshot = await this.collection.orderBy('startTime', 'asc').get();
+      return snapshot.docs.map(doc => this.toShowtime(doc));
+    } catch (error) {
+      console.error('Error fetching all showtimes:', error);
+      // Fallback: return empty array if there's an error (e.g., missing index)
+      return [];
+    }
   }
 }
