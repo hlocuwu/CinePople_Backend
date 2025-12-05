@@ -7,8 +7,9 @@ import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { ApiError } from '../../utils/ApiError';
 import { MomoPaymentRequest, MomoPaymentResponse } from './model';
 import { MomoService } from './momo.service';
+import { ZaloPayService } from './zalopay.service';
 import QRCode from 'qrcode';
-import axios from 'axios'; // Cần cài: npm install axios
+import axios from 'axios';
 import * as crypto from 'crypto';
 
 const BOOKING_COLLECTION = 'bookings';
@@ -20,6 +21,7 @@ export class PaymentService {
   private bookingCol = firebaseDB.collection(BOOKING_COLLECTION);
   private showtimeCol = firebaseDB.collection(SHOWTIME_COLLECTION);
   private momoService = new MomoService();
+  private zaloPayService = new ZaloPayService();
   /**
    * Xử lý yêu cầu thanh toán từ Client
    */
@@ -54,6 +56,18 @@ export class PaymentService {
         message: "Vui lòng thanh toán qua Momo"
       };
     }
+
+   if (dto.paymentMethod === 'zalopay') {
+      const zaloResult = await this.zaloPayService.createPaymentRequest(
+        dto.bookingId,
+        bookingData.totalPrice
+      );
+        return {
+          paymentUrl: zaloResult.payUrl,
+          deeplink: zaloResult.deeplink,
+          message: "Vui lòng thanh toán qua ZaloPay"
+        };
+   }
 
     // === NHÁNH SIMULATOR (GIẢ LẬP) ===
     if (dto.paymentMethod === 'simulator') {
