@@ -144,6 +144,47 @@ export const createBooking = async (req: Request, res: Response, next: NextFunct
 
 /**
  * @swagger
+ * /api/booking/all:
+ *   get:
+ *     summary: Lấy danh sách toàn bộ Booking (Admin)
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Danh sách toàn bộ booking hệ thống
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Booking'
+ *       403:
+ *         description: Không có quyền Admin
+ */
+export const getAllBookings = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Gọi service lấy tất cả
+    const bookings = await bookingService.getAllBookings();
+    
+    res.status(200).json({ 
+      success: true, 
+      count: bookings.length, // Thêm count để tiện theo dõi
+      data: bookings 
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @swagger
  * /api/booking:
  *   get:
  *     summary: Lấy lịch sử đặt vé của tôi

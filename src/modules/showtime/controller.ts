@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ShowtimeService } from './service';
-import { CreateShowtimeDto } from './dto';
+import { CreateShowtimeDto, UpdateShowtimeDto } from './dto';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { ApiError } from '../../utils/ApiError';
@@ -264,6 +264,102 @@ export const createShowtime = async (req: Request, res: Response, next: NextFunc
 
     const newShowtime = await showtimeService.createShowtime(dto);
     res.status(201).json({ success: true, message: 'Tạo suất chiếu thành công', data: newShowtime });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @swagger
+ * /api/showtimes/{id}:
+ *   put:
+ *     summary: Cập nhật suất chiếu (Admin)
+ *     description: Không thể cập nhật nếu đã có vé được bán/giữ.
+ *     tags: [Showtimes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateShowtimeDto'
+ *     responses:
+ *       200:
+ *         description: Cập nhật thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Showtime'
+ *       400:
+ *         description: Lỗi logic (Đã có vé bán, Dữ liệu sai)
+ *       404:
+ *         description: Không tìm thấy suất chiếu
+ */
+export const updateShowtime = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const dto = plainToInstance(UpdateShowtimeDto, req.body);
+    const errors = await validate(dto);
+    if (errors.length > 0) throw new ApiError(400, 'Dữ liệu lỗi', errors);
+
+    const updatedShowtime = await showtimeService.updateShowtime(id, dto);
+    res.status(200).json({ success: true, message: 'Cập nhật thành công', data: updatedShowtime });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @swagger
+ * /api/showtimes/{id}:
+ *   delete:
+ *     summary: Xóa suất chiếu (Admin)
+ *     description: Không thể xóa nếu đã có vé được bán/giữ.
+ *     tags: [Showtimes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Xóa thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Không thể xóa (Đã có vé bán)
+ *       404:
+ *         description: Không tìm thấy
+ */
+export const deleteShowtime = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    await showtimeService.deleteShowtime(id);
+    res.status(200).json({ success: true, message: 'Xóa suất chiếu thành công' });
   } catch (error) {
     next(error);
   }

@@ -4,14 +4,13 @@ import { auth, isAdmin } from "../../middleware/auth";
 
 const router = Router();
 
-// Public: Lấy danh sách suất chiếu (để user chọn vé)
-// URL: /api/showtimes?movieId=...&regionId=...
+// Public
 router.get('/', controller.getShowtimes);
-
-// Public: Lấy chi tiết suất chiếu (để hiển thị sơ đồ ghế)
 router.get('/:id', controller.getShowtimeById);
 
-// Admin: Tạo suất chiếu
+// Admin
 router.post('/', auth, isAdmin, controller.createShowtime);
+router.put('/:id', auth, isAdmin, controller.updateShowtime);
+router.delete('/:id', auth, isAdmin, controller.deleteShowtime);
 
 export default router;

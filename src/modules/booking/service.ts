@@ -122,6 +122,16 @@ export class BookingService {
     });
   }
 
+    async getAllBookings(): Promise<Booking[]> {
+    const snapshot = await this.bookingCol
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    if (snapshot.empty) return [];
+
+    return snapshot.docs.map(doc => this.toBooking(doc));
+  }
+
   /**
    * Lấy danh sách booking của User
    */
