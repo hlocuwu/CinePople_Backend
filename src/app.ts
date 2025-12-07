@@ -14,6 +14,7 @@ import reviewRoutes from "./modules/review/routes"
 import voucherRoutes from "./modules/voucher/routes"
 import session from "express-session";
 import { setupSwagger } from "./config/swagger";
+import chatbotRoutes from "./modules/chatbot/routes";
 
 const app = express();
 
@@ -59,5 +60,5 @@ app.use("/api/showtimes", showtimeRouters);
 app.use("/api/payment", paymentRouters);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/vouchers", voucherRoutes);
-
+app.use("/api/chatbot", chatbotRoutes);
 export default app;

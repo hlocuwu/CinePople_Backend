@@ -23,6 +23,7 @@ export const env: {
   firebaseCredentialPath?: string;
   firebaseStorageBucket: string;
   googleClientId: string;
+  huggingface: string;
   nodeEnv: 'development' | 'production' | 'test'; // <-- THÊM MỚI
 } = {
   port: Number(process.env.PORT || 5000),
@@ -34,5 +35,6 @@ export const env: {
   firebaseCredentialPath: process.env.FIREBASE_CREDENTIAL_PATH || undefined,
   firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET || "",
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
+  huggingface: process.env.HF_TOKEN || "",
   nodeEnv: getNodeEnv(), // <-- THÊM MỚI
 };
