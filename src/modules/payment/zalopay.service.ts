@@ -10,7 +10,6 @@ export class ZaloPayService {
     endpoint: "https://sb-openapi.zalopay.vn/v2/create"
   };
 
-  // Thay bằng ngrok của bạn
   private callbackUrl = "https://stringily-riverine-jerrie.ngrok-free.dev/api/payment/webhook/zalopay";
   private redirectUrl = "cinebooking://payment-result";
 
@@ -20,7 +19,6 @@ export class ZaloPayService {
     };
 
     const items: any[] = []; 
-    // Format app_trans_id: YYMMDD_BookingID
     const app_trans_id = `${moment().format('YYMMDD')}_${bookingId}`;
 
     const order: any = {
@@ -35,7 +33,6 @@ export class ZaloPayService {
       callback_url: this.callbackUrl
     };
 
-    // Tạo chữ ký MAC
     const data = `${order.app_id}|${order.app_trans_id}|${order.app_user}|${order.amount}|${order.app_time}|${order.embed_data}|${order.item}`;
     order.mac = crypto.createHmac('sha256', this.config.key1)
       .update(data)
@@ -44,9 +41,10 @@ export class ZaloPayService {
     try {
       console.log("🔵 [ZaloPay Request] ID:", app_trans_id);
       
-      // Gửi request (ZaloPay thường nhận JSON body hoặc params, dùng params như bạn cũng ok nhưng body chuẩn hơn)
-      // Ở đây giữ nguyên params nếu bạn đã test chạy được, hoặc đổi thành axios.post(url, order)
-      const response = await axios.post<any>(this.config.endpoint, null, { params: order });
+      // Vẫn giữ <any> để tránh lỗi 'response.data is unknown'
+      const response = await axios.post<any>(this.config.endpoint, order, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
       
       console.log("🟢 [ZaloPay Response]:", response.data);
 
@@ -59,12 +57,17 @@ export class ZaloPayService {
         throw new Error(`ZaloPay Error: ${response.data.return_message}`);
       }
     } catch (error: any) {
-      console.error("🔴 [ZaloPay Exception]:", error.message);
+      // FIX HERE: Thay vì dùng axios.isAxiosError, ta kiểm tra trực tiếp thuộc tính response
+      // Vì error là 'any' nên TS sẽ cho phép truy cập .response
+      if (error.response) {
+        console.error("🔴 [ZaloPay Axios Error]:", error.response.data);
+      } else {
+        console.error("🔴 [ZaloPay Exception]:", error.message);
+      }
       throw error;
     }
   }
 
-  // === PHẦN SỬA QUAN TRỌNG Ở ĐÂY ===
   verifyCallback(body: any) {
     try {
       const { data: dataStr, mac: reqMac } = body;
@@ -81,21 +84,14 @@ export class ZaloPayService {
       const dataJson = JSON.parse(dataStr);
       console.log("💰 [ZaloPay Webhook Data]:", dataJson);
 
-      // --- BẮT ĐẦU SỬA ---
-      // Logic cũ: const parts = dataJson.app_trans_id.split('_'); 
-      // Logic cũ: const originalBookingId = parts[1]; // Sẽ sai nếu bookingId có dấu "_"
-
-      // Logic mới: Tách tại dấu _ đầu tiên, lấy phần sau làm ID
       const parts = dataJson.app_trans_id.split('_');
-      // Bỏ phần tử đầu (YYMMDD), nối lại các phần còn lại bằng '_'
       const originalBookingId = parts.slice(1).join('_');
-      // --- KẾT THÚC SỬA ---
 
       return {
         isValid: true,
         bookingId: originalBookingId,
         amount: dataJson.amount,
-        status: 1 // Mặc định callback thành công của Zalo là thanh toán thành công
+        status: 1 
       };
 
     } catch (error) {
