@@ -37,11 +37,10 @@ export class BookingService {
     const bookingRef = this.bookingCol.doc(); 
 
     const now = Timestamp.now();
-    // Giữ ghế trong 10 phút
     const expiresAt = Timestamp.fromMillis(now.toMillis() + 10 * 60 * 1000); 
 
     return await firebaseDB.runTransaction(async (transaction) => {
-      // 1. Đọc document Showtime
+      // 1. Đọc document Showtime (Giữ nguyên)
       const showtimeDoc = await transaction.get(showtimeRef);
       if (!showtimeDoc.exists) {
         throw new ApiError(404, 'Suất chiếu không tồn tại');
@@ -50,33 +49,43 @@ export class BookingService {
       const showtimeData = showtimeDoc.data() as ShowtimeDocument;
       const seatMap = showtimeData.seatMap;
       
-      // 2. Validate & Tính giá gốc
+      // 2. Validate & Tính giá gốc (Giữ nguyên)
       let originalTotalPrice = 0;
       const seatUpdates: any = {}; 
 
       for (const seatCode of dto.seats) {
         const seat = seatMap[seatCode];
-
         if (!seat) throw new ApiError(400, `Ghế ${seatCode} không tồn tại`);
         if (seat.status !== SeatStatus.AVAILABLE) throw new ApiError(400, `Ghế ${seatCode} đã được đặt`);
 
         originalTotalPrice += seat.price;
 
-        // Chuẩn bị lệnh update
         seatUpdates[`seatMap.${seatCode}.status`] = SeatStatus.HELD;
         seatUpdates[`seatMap.${seatCode}.userId`] = userId;
+        // Có thể lưu thêm expireAt vào ghế để cronjob quét dễ hơn
       }
 
-      // 3. --- LOGIC TÍNH TIỀN VOUCHER ---
+      // 3. --- LOGIC TÍNH TIỀN VOUCHER (ĐÃ SỬA) ---
       let finalPrice = originalTotalPrice;
       let discountAmount = 0;
+      let voucherCodeApplied = null;
 
       if (dto.voucherCode) {
-        // Gọi service voucher để check và tính giá
-        const voucherResult = await this.voucherService.applyVoucher(dto.voucherCode, originalTotalPrice);
+        // [FIX] Truyền transaction vào để lock Voucher
+        const voucherResult = await this.voucherService.applyVoucher(
+            dto.voucherCode, 
+            originalTotalPrice, 
+            transaction
+        );
         
         finalPrice = voucherResult.finalPrice;
         discountAmount = voucherResult.discountAmount;
+        voucherCodeApplied = voucherResult.code;
+
+        // [CRITICAL FIX] Cập nhật số lượt dùng của Voucher ngay trong transaction này
+        transaction.update(voucherResult.voucherRef, {
+            usedCount: voucherResult.currentUsedCount + 1
+        });
       }
 
       // 4. Update Firestore Showtime (Giữ ghế)
@@ -91,15 +100,14 @@ export class BookingService {
         roomName: showtimeData.roomName,
         showtimeDate: showtimeData.startTime,
         seats: dto.seats,
-        seatPrice: originalTotalPrice / dto.seats.length, // Giá trung bình 1 ghế
+        seatPrice: originalTotalPrice / dto.seats.length,
         
-        // Các trường giá trị
         originalPrice: originalTotalPrice,
         discountAmount: discountAmount,
         finalPrice: finalPrice,
-        voucherCode: dto.voucherCode || null,
+        voucherCode: voucherCodeApplied, // Dùng biến đã validate
         
-        totalPrice: finalPrice, // Trường chính dùng để thanh toán
+        totalPrice: finalPrice,
 
         status: BookingStatus.PENDING,
         createdAt: now,
@@ -109,7 +117,6 @@ export class BookingService {
 
       transaction.set(bookingRef, newBooking);
 
-      // Trả về dữ liệu đã format Date cho Client
       return {
         id: bookingRef.id,
         ...newBooking,

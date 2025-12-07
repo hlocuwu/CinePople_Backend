@@ -40,39 +40,59 @@ export class VoucherService {
   }
 
   /**
-   * Kiểm tra và Tính toán giảm giá
-   * (Hàm này sẽ được dùng bởi cả Controller Voucher và Booking Service)
+   * Kiểm tra và Tính toán giảm giá (Hỗ trợ Transaction)
    */
-  async applyVoucher(code: string, orderTotal: number) {
-    const snapshot = await this.collection.where('code', '==', code.toUpperCase()).limit(1).get();
+  async applyVoucher(
+    code: string, 
+    orderTotal: number, 
+    transaction?: FirebaseFirestore.Transaction // [ADD] Thêm tham số transaction
+  ) {
+    // 1. Tìm Voucher ID trước (Query không hỗ trợ trực tiếp trong transaction.get nếu không biết ID)
+    const snapshotQuery = await this.collection
+      .where('code', '==', code.toUpperCase())
+      .limit(1)
+      .get();
     
-    if (snapshot.empty) throw new ApiError(404, 'Mã giảm giá không tồn tại');
+    if (snapshotQuery.empty) throw new ApiError(404, 'Mã giảm giá không tồn tại');
 
-    const voucher = snapshot.docs[0].data() as VoucherDocument;
+    const voucherRef = snapshotQuery.docs[0].ref; // Lấy Reference
+
+    // 2. Đọc dữ liệu (Nếu có transaction thì dùng transaction để lock)
+    let voucherDoc: FirebaseFirestore.DocumentSnapshot;
+    
+    if (transaction) {
+        voucherDoc = await transaction.get(voucherRef);
+    } else {
+        voucherDoc = await voucherRef.get();
+    }
+
+    if (!voucherDoc.exists) throw new ApiError(404, 'Mã giảm giá không tồn tại');
+    
+    const voucher = voucherDoc.data() as VoucherDocument;
     const now = Timestamp.now();
 
-    // 1. Validate logic
+    // 3. Validate logic (Giữ nguyên logic cũ)
     if (!voucher.isActive) throw new ApiError(400, 'Mã giảm giá đang bị khóa');
     if (now.toMillis() < voucher.validFrom.toMillis()) throw new ApiError(400, 'Mã giảm giá chưa bắt đầu');
     if (now.toMillis() > voucher.validTo.toMillis()) throw new ApiError(400, 'Mã giảm giá đã hết hạn');
+    
+    // [FIX] Validate số lượng
     if (voucher.usedCount >= voucher.usageLimit) throw new ApiError(400, 'Mã giảm giá đã hết lượt sử dụng');
+    
     if (orderTotal < voucher.minOrderValue) throw new ApiError(400, `Đơn hàng phải tối thiểu ${voucher.minOrderValue.toLocaleString()}đ`);
 
-    // 2. Tính tiền giảm
+    // 4. Tính tiền giảm
     let discountAmount = 0;
 
     if (voucher.discountType === DiscountType.AMOUNT) {
       discountAmount = voucher.discountValue;
     } else {
-      // Giảm theo %
       discountAmount = (orderTotal * voucher.discountValue) / 100;
-      // Check Max Discount
       if (voucher.maxDiscount && voucher.maxDiscount > 0) {
         discountAmount = Math.min(discountAmount, voucher.maxDiscount);
       }
     }
 
-    // Không giảm quá giá trị đơn hàng
     discountAmount = Math.min(discountAmount, orderTotal);
 
     return {
@@ -80,7 +100,9 @@ export class VoucherService {
       code: voucher.code,
       discountAmount: Math.floor(discountAmount),
       finalPrice: orderTotal - Math.floor(discountAmount),
-      voucherId: snapshot.docs[0].id
+      voucherId: voucherRef.id,
+      voucherRef: voucherRef, // [ADD] Trả về Ref để update
+      currentUsedCount: voucher.usedCount // [ADD] Trả về số lượt dùng hiện tại
     };
   }
 
