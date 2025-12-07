@@ -137,102 +137,126 @@ export class ShowtimeService {
 
   async updateShowtime(id: string, dto: UpdateShowtimeDto): Promise<Showtime> {
     const docRef = this.collection.doc(id);
-    const doc = await docRef.get();
-    
-    if (!doc.exists) throw new ApiError(404, 'Không tìm thấy suất chiếu');
-    
-    const currentData = doc.data() as ShowtimeDocument;
 
-    // VALIDATION: Không sửa nếu đã có người mua/giữ vé
-    if (currentData.availableSeats < currentData.totalSeats) {
-      throw new ApiError(400, 'Không thể sửa suất chiếu đã có vé được bán/giữ');
-    }
+    return await firebaseDB.runTransaction(async (transaction) => {
+      // 1. Đọc dữ liệu mới nhất trong Transaction
+      const doc = await transaction.get(docRef);
+      if (!doc.exists) throw new ApiError(404, 'Không tìm thấy suất chiếu');
 
-    const updates: any = {
-      updatedAt: Timestamp.now(),
-      ...dto
-    };
+      const currentData = doc.data() as ShowtimeDocument;
+      const seatMap = currentData.seatMap || {};
 
-    // 1. Xử lý nếu đổi Phim (cần lấy tên phim & tính lại duration)
-    let durationMinutes = 0;
-    if (dto.movieId && dto.movieId !== currentData.movieId) {
-      const movieDoc = await firebaseDB.collection(MOVIE_COLLECTION).doc(dto.movieId).get();
-      if (!movieDoc.exists) throw new ApiError(404, 'Phim mới không tồn tại');
+      // 2. [FIX VALIDATION] Check kỹ từng ghế xem có ai mua chưa
+      // Bỏ qua ghế LOCKED (bảo trì), chỉ chặn nếu có người đang giữ hoặc đã mua
+      const hasBookedSeats = Object.values(seatMap).some((seat) => {
+        return seat.status === SeatStatus.SOLD || seat.status === SeatStatus.HELD;
+      });
+
+      if (hasBookedSeats) {
+        throw new ApiError(400, 'Không thể cập nhật suất chiếu đã có vé bán ra hoặc đang giữ chỗ.');
+      }
+
+      // 3. Chuẩn bị dữ liệu update
+      const updates: any = {
+        updatedAt: Timestamp.now(),
+        // spread dto nhưng loại bỏ undefined
+        ...Object.fromEntries(Object.entries(dto).filter(([_, v]) => v !== undefined))
+      };
+
+      // --- LOGIC XỬ LÝ DỮ LIỆU ---
+
+      // A. Nếu đổi Phim -> Cập nhật tên & Tính lại giờ kết thúc
+      let durationMinutes = 0;
+      // Nếu có gửi movieId mới hoặc cần lấy lại duration cũ để tính lại time
+      const movieIdToCheck = dto.movieId || currentData.movieId;
       
-      const movieData = movieDoc.data();
-      updates.movieTitle = movieData?.title || 'Unknown';
-      durationMinutes = parseInt(movieData?.duration || "0");
-    } else {
-      // Nếu không đổi phim, lấy duration của phim hiện tại để tính lại endTime nếu startTime đổi
-      // (Lưu ý: Logic này giả định cần query lại phim cũ để lấy duration, hoặc lưu duration vào showtime doc)
-      // Để đơn giản, ta query lại phim hiện tại
-      const movieDoc = await firebaseDB.collection(MOVIE_COLLECTION).doc(currentData.movieId).get();
-      durationMinutes = parseInt(movieDoc.data()?.duration || "0");
-    }
+      // Tối ưu: Chỉ query phim nếu movieId thay đổi HOẶC startTime thay đổi (cần duration để tính endTime)
+      if (dto.movieId || dto.startTime) {
+         const movieDoc = await transaction.get(firebaseDB.collection(MOVIE_COLLECTION).doc(movieIdToCheck));
+         if (!movieDoc.exists) throw new ApiError(404, 'Phim không tồn tại');
+         
+         const movieData = movieDoc.data();
+         if (dto.movieId) updates.movieTitle = movieData?.title; // Chỉ update title nếu đổi phim
+         durationMinutes = parseInt(movieData?.duration || "0");
+      }
 
-    // 2. Xử lý nếu đổi Rạp (cần lấy tên rạp & regionId)
-    if (dto.cinemaId && dto.cinemaId !== currentData.cinemaId) {
-      const cinemaDoc = await firebaseDB.collection(CINEMA_COLLECTION).doc(dto.cinemaId).get();
-      if (!cinemaDoc.exists) throw new ApiError(404, 'Rạp mới không tồn tại');
-      
-      const cinemaData = cinemaDoc.data();
-      updates.cinemaName = cinemaData?.name;
-      updates.regionId = cinemaData?.regionId;
-    }
+      // B. [CẢNH BÁO] Chặn đổi Cinema/Room nếu không muốn reset ghế
+      if (dto.cinemaId && dto.cinemaId !== currentData.cinemaId) {
+         throw new ApiError(400, 'Không hỗ trợ đổi Rạp cho suất chiếu đã tạo. Vui lòng tạo mới.');
+      }
+      // (Nếu muốn cho đổi Room cùng rạp thì phải đảm bảo layout giống nhau, tạm thời bỏ qua logic này cho an toàn)
 
-    // 3. Tính toán lại StartTime & EndTime
-    if (dto.startTime || dto.movieId) {
-       // Nếu có gửi startTime mới thì dùng, không thì dùng cái cũ
-       const newStartTimeDate = dto.startTime ? new Date(dto.startTime) : (currentData.startTime as Timestamp).toDate();
-       const newEndTimeDate = new Date(newStartTimeDate.getTime() + durationMinutes * 60000);
-       
-       if (dto.startTime) updates.startTime = Timestamp.fromDate(newStartTimeDate);
-       updates.endTime = Timestamp.fromDate(newEndTimeDate);
-    }
+      // C. Tính lại StartTime & EndTime
+      if (dto.startTime || (dto.movieId && durationMinutes > 0)) {
+        const newStartTimeDate = dto.startTime ? new Date(dto.startTime) : (currentData.startTime as Timestamp).toDate();
+        const newEndTimeDate = new Date(newStartTimeDate.getTime() + durationMinutes * 60000);
 
-    // 4. Xử lý nếu đổi Giá vé (update lại seatMap)
-    if (dto.price && dto.price !== Object.values(currentData.seatMap)[0].price) { // So sánh cơ bản
-       const newSeatMap = { ...currentData.seatMap };
-       Object.keys(newSeatMap).forEach(key => {
-         const seat = newSeatMap[key];
-         // Chỉ update giá ghế thường/vip, logic tùy chỉnh
-         // Ví dụ đơn giản: Update base price
-         if (seat.type === SeatType.STANDARD) {
+        updates.startTime = Timestamp.fromDate(newStartTimeDate);
+        updates.endTime = Timestamp.fromDate(newEndTimeDate);
+      }
+
+      // D. [FIX PRICE] Cập nhật giá vé an toàn
+      // Vì đang trong transaction và đã check hasBookedSeats = false, ta có thể an tâm sửa giá
+      if (dto.price !== undefined) {
+        const newSeatMap = { ...seatMap }; // Copy map hiện tại
+        
+        Object.keys(newSeatMap).forEach(key => {
+          const seat = newSeatMap[key];
+          
+          // Logic giá: Base price cho Standard, +20% cho VIP (hoặc logic tùy chỉnh của bạn)
+          if (seat.type === SeatType.STANDARD) {
             seat.price = dto.price!;
-         } else if (seat.type === SeatType.VIP) {
-            seat.price = dto.price! * 1.2; // Giữ tỉ lệ VIP
-         }
-       });
-       updates.seatMap = newSeatMap;
-    }
+          } else if (seat.type === SeatType.VIP) {
+            seat.price = dto.price! * 1.2; 
+          }
+          // COUPLE...
+        });
+        
+        updates.seatMap = newSeatMap;
+      }
 
-    // Thực hiện update
-    // Dùng delete undefined fields để tránh lỗi Firestore nếu dto có field undefined
-    Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
+      // 4. Thực thi Update
+      transaction.update(docRef, updates);
 
-    await docRef.update(updates);
-
-    // Trả về dữ liệu mới
-    const updatedDoc = await docRef.get();
-    return this.toShowtime(updatedDoc);
+      // Trả về dữ liệu mockup đã update (đỡ phải get lại lần nữa)
+      return {
+          id: docRef.id,
+          ...currentData,
+          ...updates,
+          startTime: (updates.startTime || currentData.startTime).toDate(),
+          endTime: (updates.endTime || currentData.endTime).toDate()
+      } as Showtime;
+    });
   }
 
   /**
    * Xóa suất chiếu
-   * Logic: Không cho xóa nếu đã có vé bán ra.
+   * Fix: Kiểm tra trực tiếp trong seatMap thay vì tin vào biến đếm availableSeats
    */
   async deleteShowtime(id: string): Promise<void> {
     const docRef = this.collection.doc(id);
-    const doc = await docRef.get();
+    
+    // Dùng transaction để đảm bảo dữ liệu nhất quán nhất khi đọc
+    await firebaseDB.runTransaction(async (transaction) => {
+      const doc = await transaction.get(docRef);
 
-    if (!doc.exists) throw new ApiError(404, 'Không tìm thấy suất chiếu');
+      if (!doc.exists) throw new ApiError(404, 'Không tìm thấy suất chiếu');
 
-    const data = doc.data() as ShowtimeDocument;
+      const data = doc.data() as ShowtimeDocument;
+      const seatMap = data.seatMap || {};
 
-    if (data.availableSeats < data.totalSeats) {
-      throw new ApiError(400, 'Không thể xóa suất chiếu đã có vé được bán/giữ');
-    }
+      // QUAN TRỌNG: Quét toàn bộ ghế để xem có ghế nào đang không Available hay không
+      // Nếu có ghế SOLD (đã bán) hoặc HELD (đang giữ chỗ thanh toán) -> Chặn xóa
+      const hasBookedSeats = Object.values(seatMap).some((seat) => {
+        return seat.status === SeatStatus.SOLD || seat.status === SeatStatus.HELD;
+      });
 
-    await docRef.delete();
+      if (hasBookedSeats) {
+        throw new ApiError(400, 'Không thể xóa suất chiếu đã có vé được bán hoặc đang giữ chỗ.');
+      }
+
+      // Nếu an toàn thì mới xóa
+      transaction.delete(docRef);
+    });
   }
 }

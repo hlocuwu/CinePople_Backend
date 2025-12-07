@@ -2,7 +2,7 @@ import { firebaseDB } from '../../config/firebase';
 import { CreateBookingDto } from './dto';
 import { Booking, BookingDocument, BookingStatus } from './model';
 import { SeatStatus, ShowtimeDocument } from '../showtime/model'; 
-import { Timestamp } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { ApiError } from '../../utils/ApiError';
 import { VoucherService } from '../voucher/service'; // Import VoucherService
 
@@ -89,7 +89,10 @@ export class BookingService {
       }
 
       // 4. Update Firestore Showtime (Giữ ghế)
-      transaction.update(showtimeRef, seatUpdates);
+      transaction.update(showtimeRef, {
+        ...seatUpdates,
+        availableSeats: FieldValue.increment(-dto.seats.length)
+      });
 
       // 5. Tạo Booking Document
       const newBooking: BookingDocument = {
