@@ -7,7 +7,6 @@ import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { ApiError } from '../../utils/ApiError';
 import { MomoPaymentRequest, MomoPaymentResponse } from './model';
 import { MomoService } from './momo.service';
-import { ZaloPayService } from './zalopay.service';
 import QRCode from 'qrcode';
 import axios from 'axios';
 import * as crypto from 'crypto';
@@ -21,7 +20,6 @@ export class PaymentService {
   private bookingCol = firebaseDB.collection(BOOKING_COLLECTION);
   private showtimeCol = firebaseDB.collection(SHOWTIME_COLLECTION);
   private momoService = new MomoService();
-  private zaloPayService = new ZaloPayService();
   /**
    * Xử lý yêu cầu thanh toán từ Client
    */
@@ -56,18 +54,6 @@ export class PaymentService {
         message: "Vui lòng thanh toán qua Momo"
       };
     }
-
-   if (dto.paymentMethod === 'zalopay') {
-      const zaloResult = await this.zaloPayService.createPaymentRequest(
-        dto.bookingId,
-        bookingData.totalPrice
-      );
-        return {
-          paymentUrl: zaloResult.payUrl,
-          deeplink: zaloResult.deeplink,
-          message: "Vui lòng thanh toán qua ZaloPay"
-        };
-   }
 
     // === NHÁNH SIMULATOR (GIẢ LẬP) ===
     if (dto.paymentMethod === 'simulator') {
@@ -110,49 +96,6 @@ export class PaymentService {
       return { status: 500 };
     }
   }
-
-  async handleZaloPayCallback(body: any) {
-    console.log("💰 [Webhook] ZaloPay callback received");
-
-    // 1. Verify chữ ký (Quan trọng)
-    const result = this.zaloPayService.verifyCallback(body);
-    
-    // ZaloPay yêu cầu trả về return_code khác 1 nếu lỗi
-    if (!result.isValid) {
-      console.error("❌ Invalid Signature ZaloPay");
-      return { return_code: -1, return_message: "Mac not equal" };
-    }
-
-    // 2. Kiểm tra giao dịch thành công (ZaloPay status = 1 là thành công)
-    if (result.status !== 1) {
-       console.log("⚠️ Transaction failed or pending");
-       return { return_code: 1, return_message: "success" }; // Vẫn báo success để Zalo không gọi lại nữa
-    }
-
-    const bookingId = result.bookingId; // Đã tách từ app_trans_id
-    if (!bookingId) return { return_code: 0, return_message: "Booking ID not found" };
-
-    // 3. Lấy thông tin User để chốt đơn
-    // Vì Zalo callback không trả về userId, ta phải query lại từ BookingId
-    const bookingDoc = await this.bookingCol.doc(bookingId).get();
-    if (!bookingDoc.exists) {
-        return { return_code: 0, return_message: "Booking not exist" };
-    }
-    const bookingData = bookingDoc.data() as BookingDocument;
-
-    // 4. Chốt đơn (Finalize)
-    try {
-      await this.finalizeBooking(bookingId, bookingData.userId, 'zalopay');
-      
-      // ZaloPay yêu cầu return_code: 1 để xác nhận đã nhận hook thành công
-      return { return_code: 1, return_message: "success" };
-    } catch (error) {
-      console.error("Finalize ZaloPay Error:", error);
-      // Nếu lỗi server, có thể trả về 0 để ZaloPay thử gọi lại sau (tùy logic business)
-      return { return_code: 0, return_message: "Internal Server Error" };
-    }
-  }
-
   /**
    * Logic chung: Chốt đơn, Update DB, Tạo QR
    */

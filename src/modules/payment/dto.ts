@@ -6,6 +6,6 @@ export class ProcessPaymentDto {
   bookingId!: string;
 
   @IsString()
-  @IsIn(['momo', 'zalopay', 'card', 'simulator'], { message: 'Phương thức thanh toán không hợp lệ' })
+  @IsIn(['momo', 'simulator'], { message: 'Phương thức thanh toán không hợp lệ' })
   paymentMethod!: string;
 }
