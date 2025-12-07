@@ -122,3 +122,16 @@ export const handleMomoWebhook = async (req: Request, res: Response, next: NextF
     res.status(500).send();
   }
 };
+
+export const handleZaloPayWebhook = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // ZaloPay gửi data dạng JSON trong body
+    const result = await paymentService.handleZaloPayCallback(req.body);
+    
+    // ZaloPay cần nhận phản hồi JSON { return_code, return_message }
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ return_code: 0, return_message: "Exception" });
+  }
+};

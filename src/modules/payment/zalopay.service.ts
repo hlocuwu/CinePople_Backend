@@ -1,6 +1,5 @@
 import axios from 'axios';
 import * as crypto from 'crypto';
-// SỬA 1: Đổi cách import moment
 import moment from 'moment'; 
 
 export class ZaloPayService {
@@ -11,7 +10,7 @@ export class ZaloPayService {
     endpoint: "https://sb-openapi.zalopay.vn/v2/create"
   };
 
-  // Thay link Ngrok của bạn vào đây
+  // Thay bằng ngrok của bạn
   private callbackUrl = "https://stringily-riverine-jerrie.ngrok-free.dev/api/payment/webhook/zalopay";
   private redirectUrl = "cinebooking://payment-result";
 
@@ -20,13 +19,11 @@ export class ZaloPayService {
       redirecturl: this.redirectUrl
     };
 
-    const items = [{}]; 
-    const transID = Math.floor(Math.random() * 1000000); 
-    
-    // moment() bây giờ sẽ gọi được bình thường
+    const items: any[] = []; 
+    // Format app_trans_id: YYMMDD_BookingID
     const app_trans_id = `${moment().format('YYMMDD')}_${bookingId}`;
 
-    const order = {
+    const order: any = {
       app_id: this.config.app_id,
       app_user: "CineUser",
       app_trans_id: app_trans_id, 
@@ -35,25 +32,24 @@ export class ZaloPayService {
       item: JSON.stringify(items),
       description: `Thanh toan booking #${bookingId}`,
       embed_data: JSON.stringify(embed_data),
-      callback_url: this.callbackUrl,
-      mac: "" 
+      callback_url: this.callbackUrl
     };
 
+    // Tạo chữ ký MAC
     const data = `${order.app_id}|${order.app_trans_id}|${order.app_user}|${order.amount}|${order.app_time}|${order.embed_data}|${order.item}`;
-    
     order.mac = crypto.createHmac('sha256', this.config.key1)
       .update(data)
       .digest('hex');
 
     try {
-      console.log("🔵 [ZaloPay Request] Sending to:", this.config.endpoint);
+      console.log("🔵 [ZaloPay Request] ID:", app_trans_id);
       
-      // SỬA 2: Thêm <any> vào axios.post<any> để báo TS biết data trả về kiểu gì cũng được
+      // Gửi request (ZaloPay thường nhận JSON body hoặc params, dùng params như bạn cũng ok nhưng body chuẩn hơn)
+      // Ở đây giữ nguyên params nếu bạn đã test chạy được, hoặc đổi thành axios.post(url, order)
       const response = await axios.post<any>(this.config.endpoint, null, { params: order });
       
       console.log("🟢 [ZaloPay Response]:", response.data);
 
-      // Bây giờ TS sẽ không báo lỗi dòng này nữa
       if (response.data.return_code === 1) {
         return {
           payUrl: response.data.order_url, 
@@ -68,6 +64,7 @@ export class ZaloPayService {
     }
   }
 
+  // === PHẦN SỬA QUAN TRỌNG Ở ĐÂY ===
   verifyCallback(body: any) {
     try {
       const { data: dataStr, mac: reqMac } = body;
@@ -84,14 +81,21 @@ export class ZaloPayService {
       const dataJson = JSON.parse(dataStr);
       console.log("💰 [ZaloPay Webhook Data]:", dataJson);
 
+      // --- BẮT ĐẦU SỬA ---
+      // Logic cũ: const parts = dataJson.app_trans_id.split('_'); 
+      // Logic cũ: const originalBookingId = parts[1]; // Sẽ sai nếu bookingId có dấu "_"
+
+      // Logic mới: Tách tại dấu _ đầu tiên, lấy phần sau làm ID
       const parts = dataJson.app_trans_id.split('_');
-      const originalBookingId = parts.length > 1 ? parts[1] : dataJson.app_trans_id;
+      // Bỏ phần tử đầu (YYMMDD), nối lại các phần còn lại bằng '_'
+      const originalBookingId = parts.slice(1).join('_');
+      // --- KẾT THÚC SỬA ---
 
       return {
         isValid: true,
         bookingId: originalBookingId,
         amount: dataJson.amount,
-        status: dataJson.status 
+        status: 1 // Mặc định callback thành công của Zalo là thanh toán thành công
       };
 
     } catch (error) {
