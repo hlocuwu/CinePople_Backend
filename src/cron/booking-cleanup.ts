@@ -10,7 +10,7 @@ const showtimeCol = firebaseDB.collection('showtimes');
 export const startBookingCleanupJob = () => {
   // Chạy mỗi phút một lần (* * * * *)
   cron.schedule('* * * * *', async () => {
-    console.log('[CRON] Đang quét các booking hết hạn...');
+    console.log('🧹 [CRON] Đang quét các booking hết hạn...');
 
     const now = Timestamp.now();
 
@@ -22,13 +22,13 @@ export const startBookingCleanupJob = () => {
         .get();
 
       if (snapshot.empty) {
-        // console.log('Không có booking nào hết hạn.');
         return;
       }
 
-      console.log(`Tìm thấy ${snapshot.size} booking hết hạn. Đang xử lý...`);
+      console.log(`⚠️ Tìm thấy ${snapshot.size} booking hết hạn. Đang xử lý...`);
 
-      const batch = firebaseDB.batch(); // Dùng Batch để xử lý hàng loạt cho nhanh
+      const batch = firebaseDB.batch();
+      let hasOperation = false;
 
       // 2. Duyệt qua từng booking hết hạn
       for (const doc of snapshot.docs) {
@@ -36,32 +36,43 @@ export const startBookingCleanupJob = () => {
         const showtimeId = bookingData.showtimeId;
         const seats = bookingData.seats as string[]; // ['A1', 'A2']
 
-        // A. Cập nhật trạng thái Booking -> CANCELLED
+        // A. Cập nhật trạng thái Booking -> CANCELLED (Luôn thực hiện)
         const bookingRef = bookingCol.doc(doc.id);
         batch.update(bookingRef, {
           status: BookingStatus.CANCELLED,
           updatedAt: now
         });
+        hasOperation = true;
 
-        // B. Nhả ghế trong Showtime -> AVAILABLE
-        const showtimeRef = showtimeCol.doc(showtimeId);
+        // B. Nhả ghế trong Showtime (CÓ KIỂM TRA TỒN TẠI)
+        if (showtimeId) {
+            const showtimeRef = showtimeCol.doc(showtimeId);
+            
+            // 🔥 QUAN TRỌNG: Phải đọc xem Suất chiếu còn tồn tại không
+            const showtimeDoc = await showtimeRef.get();
 
-        // Tạo object update động: { "seatMap.A1.status": "available", ... }
-        const seatUpdates: any = {};
-        seats.forEach((seatCode) => {
-          seatUpdates[`seatMap.${seatCode}.status`] = SeatStatus.AVAILABLE;
-          seatUpdates[`seatMap.${seatCode}.userId`] = FieldValue.delete(); // Xóa người giữ
-        });
-
-        batch.update(showtimeRef, seatUpdates);
+            if (showtimeDoc.exists) {
+                // Nếu còn tồn tại thì mới update nhả ghế
+                const seatUpdates: any = {};
+                seats.forEach((seatCode) => {
+                    seatUpdates[`seatMap.${seatCode}.status`] = SeatStatus.AVAILABLE;
+                    seatUpdates[`seatMap.${seatCode}.userId`] = FieldValue.delete();
+                });
+                batch.update(showtimeRef, seatUpdates);
+            } else {
+                console.warn(`⚠️ Showtime ${showtimeId} không tồn tại, chỉ hủy booking.`);
+            }
+        }
       }
 
       // 3. Thực thi tất cả thay đổi
-      await batch.commit();
-      console.log(`Đã hủy thành công ${snapshot.size} booking và nhả ghế.`);
+      if (hasOperation) {
+          await batch.commit();
+          console.log(`✅ Đã hủy thành công ${snapshot.size} booking và nhả ghế.`);
+      }
 
     } catch (error) {
-      console.error('[CRON ERROR] Lỗi khi dọn dẹp booking:', error);
+      console.error('❌ [CRON ERROR] Lỗi khi dọn dẹp booking:', error);
     }
   });
 };
