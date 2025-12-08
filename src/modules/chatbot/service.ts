@@ -1,4 +1,3 @@
-// src/modules/chatbot/service.ts
 import axios from "axios";
 
 export const generateResponse = async (message: string): Promise<string> => {
@@ -18,7 +17,7 @@ export const generateResponse = async (message: string): Promise<string> => {
                 messages: [
                     {
                         role: "system",
-                        content: "You are a friendly, concise assistant. Keep replies short and clear."
+                        content: "Bạn là một trợ lý ảo của ứng dụng đặt vé xem phim và luôn trả lời các thông tin chính xác. Trả lời ngắn gọn và rõ ràng. Nếu hỏi bằng Tiếng Anh thì trả lời bằng Tiếng Anh, nếu hỏi bằng Tiếng Việt thì trả lời bằng Tiếng Việt"
                     },
                     {
                         role: "user",
@@ -39,7 +38,7 @@ export const generateResponse = async (message: string): Promise<string> => {
 
         const data: any = response.data;
 
-        // ✅ Format đúng với router HF
+        // Format đúng với router HF
         const text =
             data?.choices?.[0]?.message?.content ||
             "Không nhận được phản hồi từ AI";

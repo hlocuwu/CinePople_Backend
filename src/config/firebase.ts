@@ -3,7 +3,6 @@ import { env } from "./env";
 
 if (!admin.apps.length) {
     // Xử lý private key, vì trong .env nó là một chuỗi
-    // Code của bạn đã xử lý đúng phần này
     let privateKey = env.firebasePrivateKey || "";
     if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
         privateKey = privateKey.slice(1, -1);

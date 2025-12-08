@@ -34,6 +34,10 @@
    │  │  ├─ service.ts
    │  │  ├─ types.ts
    │  │  └─ routes.ts
+   │  ├─ chatbot/
+   │  │  ├─ controller.ts
+   │  │  ├─ service.ts
+   │  │  └─ routes.ts
    │  ├─ movie/
    │  │  ├─ controller.ts
    │  │  ├─ dto.ts

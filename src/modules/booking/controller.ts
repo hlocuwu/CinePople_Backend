@@ -172,11 +172,11 @@ export const getAllBookings = async (req: Request, res: Response, next: NextFunc
   try {
     // Gọi service lấy tất cả
     const bookings = await bookingService.getAllBookings();
-    
-    res.status(200).json({ 
-      success: true, 
+
+    res.status(200).json({
+      success: true,
       count: bookings.length, // Thêm count để tiện theo dõi
-      data: bookings 
+      data: bookings
     });
   } catch (error) {
     next(error);

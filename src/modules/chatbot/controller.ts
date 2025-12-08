@@ -1,5 +1,3 @@
-// src/modules/chatbot/controller.ts
-
 import { Request, Response } from 'express';
 import { generateResponse } from './service';
 

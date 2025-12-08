@@ -4,12 +4,12 @@ import admin from "firebase-admin";
 export async function saveOTP(phone: string, code: string) {
     const otpRef = firebaseDB.collection('otps').doc(phone);
 
-    // Save OTP with expiration time (5 minutes from now)
+    // Lưu mã OTP trong 5 phút
     await otpRef.set({
         code,
         phone,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        expiresAt: admin.firestore.Timestamp.fromMillis(Date.now() + 5 * 60 * 1000) // 5 minutes
+        expiresAt: admin.firestore.Timestamp.fromMillis(Date.now() + 5 * 60 * 1000) // 5 phút
     });
 }
 
@@ -24,14 +24,14 @@ export async function verifyOTP(phone: string, code: string) {
     const otpData = otpDoc.data()!;
     const now = admin.firestore.Timestamp.now();
 
-    // Check if OTP has expired
+    // Kiểm tra mã OTP hết hạn hay chưa
     if (now.toMillis() > otpData.expiresAt.toMillis()) {
-        // Delete expired OTP
+        // Xóa mã OTP đã hết hạn
         await otpRef.delete();
         return false;
     }
 
-    // Delete OTP after verification (one-time use)
+    // Xóa mã OTP sau khi đã được sử dụng
     await otpRef.delete();
 
     return otpData.code === code;
