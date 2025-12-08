@@ -24,7 +24,7 @@ export const env: {
   firebaseStorageBucket: string;
   googleClientId: string;
   huggingface: string;
-  nodeEnv: 'development' | 'production' | 'test'; // <-- THÊM MỚI
+  nodeEnv: 'development' | 'production' | 'test';
 } = {
   port: Number(process.env.PORT || 5000),
   jwtSecret: process.env.JWT_SECRET!,
@@ -36,5 +36,5 @@ export const env: {
   firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET || "",
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
   huggingface: process.env.HF_TOKEN || "",
-  nodeEnv: getNodeEnv(), // <-- THÊM MỚI
+  nodeEnv: getNodeEnv(),
 };

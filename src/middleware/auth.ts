@@ -29,7 +29,7 @@ export const auth = async (req: Request, res: Response, next: NextFunction) => {
 
     // Ép kiểu req thành AuthRequest để gán user
     (req as AuthRequest).user = decodedToken;
-    
+
     next();
   } catch (error) {
     return res.status(401).json({
@@ -49,11 +49,11 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     if (authHeader && authHeader.startsWith("Bearer ")) {
       const token = authHeader.split(" ")[1];
       const decodedToken = await firebaseAuth.verifyIdToken(token);
-      
+
       // Ép kiểu để gán
       (req as AuthRequest).user = decodedToken;
     }
-    
+
     next();
   } catch (error) {
     next();
@@ -68,29 +68,29 @@ export const isAdmin = async (req: Request, res: Response, next: NextFunction) =
     const user = (req as AuthRequest).user;
 
     if (!user) {
-      console.log("❌ [Admin Check] Không tìm thấy user trong request");
+      console.log("[Admin Check] Không tìm thấy user trong request");
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    console.log("👉 [Admin Check] Đang kiểm tra UID:", user.uid);
+    console.log("[Admin Check] Đang kiểm tra UID:", user.uid);
 
     // Truy vấn Firestore
     const userDoc = await firebaseDB.collection('users').doc(user.uid).get();
 
     // LOG QUAN TRỌNG: Xem tìm thấy gì trong DB
-    console.log("🔎 [Admin Check] Tìm thấy trong DB?", userDoc.exists);
+    console.log("[Admin Check] Tìm thấy trong DB?", userDoc.exists);
     if (userDoc.exists) {
-        console.log("📄 [Admin Check] Data:", userDoc.data());
+      console.log("[Admin Check] Data:", userDoc.data());
     } else {
-        console.log("⚠️ [Admin Check] Document không tồn tại với ID này!");
+      console.log("[Admin Check] Document không tồn tại với ID này!");
     }
 
     if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
-      console.log("⛔ [Admin Check] Bị chặn! Role hiện tại:", userDoc.data()?.role);
+      console.log("[Admin Check] Bị chặn! Role hiện tại:", userDoc.data()?.role);
       return res.status(403).json({ success: false, message: "Forbidden - Admin access required" });
     }
 
-    console.log("✅ [Admin Check] Hợp lệ! Cho qua.");
+    console.log("[Admin Check] Hợp lệ! Cho qua.");
     next();
   } catch (error) {
     console.error("Check Admin Error:", error);

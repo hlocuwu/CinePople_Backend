@@ -34,7 +34,7 @@ export class PaymentService {
     if (bookingData.userId !== userId) throw new ApiError(403, 'Booking này không phải của bạn');
     if (bookingData.status === BookingStatus.PAID) throw new ApiError(400, 'Booking này đã thanh toán rồi');
     if (bookingData.status === BookingStatus.CANCELLED) throw new ApiError(400, 'Booking này đã bị hủy');
-    
+
     const now = Timestamp.now();
     if (bookingData.expiresAt.toMillis() < now.toMillis()) {
       throw new ApiError(400, 'Booking đã hết thời gian giữ ghế. Vui lòng đặt lại.');
@@ -66,25 +66,25 @@ export class PaymentService {
   }
 
   async handleMomoCallback(body: any) {
-    console.log("💰 [Webhook] Momo callback:", body);
+    console.log("[Webhook] Momo callback:", body);
 
     // // 1. Verify chữ ký
     // if (!this.momoService.verifySignature(body)) {
-    //   console.error("❌ Invalid Signature");
+    //   console.error("Invalid Signature");
     //   return { status: 400 }; 
     // }
 
     // 2. Kiểm tra thành công (resultCode = 0)
     if (body.resultCode !== 0) {
-      console.log("⚠️ Transaction failed");
+      console.log("Transaction failed");
       return { status: 204 };
     }
 
     const bookingId = body.orderId;
-    
+
     // Lấy userId từ DB (vì Momo không trả về custom field này)
     const bookingDoc = await this.bookingCol.doc(bookingId).get();
-    if(!bookingDoc.exists) return { status: 204 };
+    if (!bookingDoc.exists) return { status: 204 };
     const bookingData = bookingDoc.data() as BookingDocument;
 
     // 3. Chốt đơn (Update PAID)
@@ -103,27 +103,27 @@ export class PaymentService {
     return await firebaseDB.runTransaction(async (transaction) => {
       const bookingRef = this.bookingCol.doc(bookingId);
       const bookingDoc = await transaction.get(bookingRef);
-      
+
       if (!bookingDoc.exists) throw new ApiError(404, 'Booking not found');
       const bookingData = bookingDoc.data() as BookingDocument;
 
       if (bookingData.status === BookingStatus.PAID) {
         return { message: "Booking đã được thanh toán trước đó" };
-      } 
+      }
 
       // === 1. LOGIC TÍCH ĐIỂM & THĂNG HẠNG (MỚI THÊM) ===
       const userRef = firebaseDB.collection(USER_COLLECTION).doc(userId);
       const userDoc = await transaction.get(userRef);
-      
+
       if (userDoc.exists) {
         const userData = userDoc.data();
-        
+
         // Tích điểm: 5% giá trị đơn hàng
         const pointsEarned = Math.floor(bookingData.totalPrice * 0.05);
-        
+
         // Tính tổng chi tiêu mới
         const currentSpending = (userData?.totalSpending || 0) + bookingData.totalPrice;
-        
+
         // Logic thăng hạng
         let newRank = userData?.rank || MembershipRank.STANDARD;
         if (currentSpending >= 10000000) newRank = MembershipRank.DIAMOND;

@@ -1,4 +1,3 @@
-// src/modules/chatbot/service.ts
 import axios from "axios";
 
 export const generateResponse = async (message: string): Promise<string> => {
@@ -39,7 +38,7 @@ export const generateResponse = async (message: string): Promise<string> => {
 
         const data: any = response.data;
 
-        // ✅ Format đúng với router HF
+        // Format đúng với router HF
         const text =
             data?.choices?.[0]?.message?.content ||
             "Không nhận được phản hồi từ AI";

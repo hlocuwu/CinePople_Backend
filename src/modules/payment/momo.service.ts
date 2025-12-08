@@ -14,7 +14,7 @@ export class MomoService {
   // QUAN TRỌNG: Đây là đường dẫn Momo sẽ gọi về khi thanh toán xong
   // Hardcode IP Public để test nhanh (Thay vì dùng env)
   private ipnUrl = "https://stringily-riverine-jerrie.ngrok-free.dev/api/payment/webhook/momo";
-  
+
   // URL Redirect: Quay về App sau khi thanh toán xong
   private redirectUrl = "cinebooking://payment-result";
 
@@ -24,7 +24,7 @@ export class MomoService {
     const orderId = bookingId;
     const orderInfo = `Thanh toán booking ${bookingId}`;
     const requestType = "captureWallet";
-    const extraData = ""; 
+    const extraData = "";
 
     // 2. Tạo chữ ký (Signature)
     // QUAN TRỌNG: Phải đúng thứ tự alphabel (a-z) của các param
@@ -52,7 +52,7 @@ export class MomoService {
 
     try {
       console.log("🔵 [Momo Request] Sending to:", this.config.endpoint);
-      
+
       // 4. Gửi HTTP Request bằng Axios (Thêm <any> để fix lỗi type unknown)
       const response = await axios.post<any>(this.config.endpoint, requestBody, {
         headers: { 'Content-Type': 'application/json' }
@@ -69,7 +69,7 @@ export class MomoService {
         throw new Error(`Momo Error: ${response.data.message}`);
       }
     } catch (error: any) {
-      console.error("🔴 [Momo Exception]:", error.message);
+      console.error("[Momo Exception]:", error.message);
       throw error;
     }
   }

@@ -34,6 +34,10 @@
    │  │  ├─ service.ts
    │  │  ├─ types.ts
    │  │  └─ routes.ts
+   │  ├─ chatbot/
+   │  │  ├─ controller.ts
+   │  │  ├─ service.ts
+   │  │  └─ routes.ts
    │  ├─ movie/
    │  │  ├─ controller.ts
    │  │  ├─ dto.ts
@@ -76,7 +80,7 @@
    │  └─ user/
    │     ├─ controller.ts
    │     └─ routes.ts
-   └─ utils/
+      └─ utils/
       ├─ jwt.ts
       ├─ otp.ts
       └─ qrcode.ts

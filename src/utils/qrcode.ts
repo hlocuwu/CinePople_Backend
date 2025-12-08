@@ -1,4 +1,3 @@
-// src/utils/qrcode.ts
 import QRCode from "qrcode";
 
 /**
