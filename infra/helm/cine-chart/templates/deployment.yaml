@@ -68,6 +68,11 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.existingSecretName }}
                   key: GOOGLE_CLIENT_ID
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecretName }}
+                  key: HF_TOKEN
           {{- with .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
