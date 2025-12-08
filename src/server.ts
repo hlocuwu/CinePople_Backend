@@ -7,6 +7,7 @@ startBookingCleanupJob();
 async function bootstrap() {
     app.listen(env.port, () => {
         console.log(`Server started at http://localhost:${env.port}`);
+        console.log(`Demo 2: Auto deploy`);
     });
 }
 
