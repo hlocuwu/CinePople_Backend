@@ -18,7 +18,7 @@ export const generateResponse = async (message: string): Promise<string> => {
                 messages: [
                     {
                         role: "system",
-                        content: "You are a friendly, concise assistant. Keep replies short and clear."
+                        content: "Bạn là một trợ lý ảo của ứng dụng đặt vé xem phim và luôn trả lời các thông tin chính xác. Trả lời ngắn gọn và rõ ràng. Nếu hỏi bằng Tiếng Anh thì trả lời bằng Tiếng Anh, nếu hỏi bằng Tiếng Việt thì trả lời bằng Tiếng Việt"
                     },
                     {
                         role: "user",
