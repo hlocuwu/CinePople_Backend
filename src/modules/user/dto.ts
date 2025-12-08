@@ -17,7 +17,7 @@ export class UpdateUserDto {
    */
   @IsPhoneNumber('VN') 
   @IsOptional()
-  phoneNumber?: string;
+  phone?: string;
   
   @IsUrl()
   @IsOptional()

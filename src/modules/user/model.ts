@@ -17,7 +17,7 @@ export interface UserDocument {
   email: string;
   displayName?: string;
   photoURL?: string;
-  phoneNumber?: string;
+  phone?: string;
   
   createdAt: Timestamp;
   updatedAt: Timestamp;

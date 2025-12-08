@@ -23,7 +23,7 @@ export class AuthService {
         email: email || "",
         displayName: name || "New User",
         photoURL: picture || "",
-        phoneNumber: phone_number || "",
+        phone: phone_number || "",
         role: 'user',
         createdAt: now,
         updatedAt: now,
