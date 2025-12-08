@@ -80,7 +80,7 @@
    │  └─ user/
    │     ├─ controller.ts
    │     └─ routes.ts
-      └─ utils/
+   └─ utils/
       ├─ jwt.ts
       ├─ otp.ts
       └─ qrcode.ts

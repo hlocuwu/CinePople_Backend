@@ -139,24 +139,24 @@ export async function updateUser(req: Request, res: Response) {
   }
 }
 
-/**
- * @swagger
- * /api/users/{id}/bookings:
- *   get:
- *     summary: Lấy lịch sử đặt vé của user
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Danh sách vé đã đặt
- */
+// /**
+//  * @swagger
+//  * /api/users/{id}/bookings:
+//  *   get:
+//  *     summary: Lấy lịch sử đặt vé của user
+//  *     tags: [Users]
+//  *     security:
+//  *       - bearerAuth: []
+//  *     parameters:
+//  *       - in: path
+//  *         name: id
+//  *         required: true
+//  *         schema:
+//  *           type: string
+//  *     responses:
+//  *       200:
+//  *         description: Danh sách vé đã đặt
+//  */
 export async function getBookings(req: Request, res: Response) {
   try {
     const { id } = req.params;
