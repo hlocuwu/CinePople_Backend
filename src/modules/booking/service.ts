@@ -4,7 +4,7 @@ import { Booking, BookingDocument, BookingStatus } from './model';
 import { SeatStatus, ShowtimeDocument } from '../showtime/model'; 
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { ApiError } from '../../utils/ApiError';
-import { VoucherService } from '../voucher/service'; // Import VoucherService
+import { VoucherService } from '../voucher/service';
 
 const BOOKING_COLLECTION = 'bookings';
 const SHOWTIME_COLLECTION = 'showtimes';
@@ -12,11 +12,8 @@ const SHOWTIME_COLLECTION = 'showtimes';
 export class BookingService {
   private bookingCol = firebaseDB.collection(BOOKING_COLLECTION);
   private showtimeCol = firebaseDB.collection(SHOWTIME_COLLECTION);
-  private voucherService = new VoucherService(); // Khởi tạo service
+  private voucherService = new VoucherService();
 
-  /**
-   * Helper chuyển đổi Document sang Model chuẩn
-   */
   private toBooking(doc: FirebaseFirestore.DocumentSnapshot): Booking {
     const data = doc.data() as BookingDocument;
     return {
@@ -29,9 +26,6 @@ export class BookingService {
     };
   }
 
-  /**
-   * Tạo Booking & Giữ ghế (Transaction)
-   */
   async createBooking(userId: string, dto: CreateBookingDto): Promise<Booking> {
     const showtimeRef = this.showtimeCol.doc(dto.showtimeId);
     const bookingRef = this.bookingCol.doc(); 

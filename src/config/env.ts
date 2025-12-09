@@ -2,8 +2,6 @@ import dotenv from "dotenv";
 import type { StringValue } from "ms";
 dotenv.config();
 
-// --- THÊM MỚI: Hàm kiểm tra NODE_ENV ---
-// Điều này đảm bảo env.nodeEnv luôn là một trong 3 giá trị
 const getNodeEnv = (): 'development' | 'production' | 'test' => {
   const env = process.env.NODE_ENV;
   if (env === 'production' || env === 'test') {
@@ -11,7 +9,6 @@ const getNodeEnv = (): 'development' | 'production' | 'test' => {
   }
   return 'development';
 };
-// --- HẾT PHẦN THÊM MỚI ---
 
 export const env: {
   port: number;

@@ -20,7 +20,6 @@ const options: swaggerJsdoc.Options = {
         description: "Current Server",
       },
     ],
-    // Cấu hình nút "Authorize" để nhập Token
     components: {
       securitySchemes: {
         bearerAuth: {
@@ -36,10 +35,10 @@ const options: swaggerJsdoc.Options = {
       },
     ],
   },
-  // Đường dẫn tới các file chứa comment swagger
+
   apis: process.env.NODE_ENV === 'production'
-    ? ["./dist/modules/**/controller.js", "./dist/modules/**/dto.js"] // Chạy trong Docker (JS)
-    : ["./src/modules/**/*.ts"], // Chạy Local (TS) 
+    ? ["./dist/modules/**/controller.js", "./dist/modules/**/dto.js"] 
+    : ["./src/modules/**/*.ts"],
 };
 
 const swaggerSpec = swaggerJsdoc(options);

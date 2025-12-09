@@ -4,7 +4,6 @@ import { Strategy as FacebookStrategy } from "passport-facebook";
 import { firebaseDB } from "./firebase";
 import admin from "firebase-admin";
 
-// Serialize / Deserialize
 passport.serializeUser((user: any, done) => {
     done(null, user.id);
 });
@@ -18,7 +17,6 @@ passport.deserializeUser(async (id: number, done) => {
     }
 });
 
-// GOOGLE 
 passport.use(
     new GoogleStrategy(
         {
@@ -50,7 +48,6 @@ passport.use(
     )
 );
 
-// FACEBOOK 
 passport.use(
     new FacebookStrategy(
         {

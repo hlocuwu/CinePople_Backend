@@ -2,17 +2,10 @@ import { Request, Response, NextFunction } from "express";
 import { firebaseAuth, firebaseDB } from "../config/firebase";
 import { DecodedIdToken } from "firebase-admin/auth";
 
-/**
- * Interface này vẫn giữ để dùng cho Controller ép kiểu
- */
 export interface AuthRequest extends Request {
   user?: DecodedIdToken;
 }
 
-/**
- * FIX LỖI: Thay đổi tham số đầu vào thành 'req: Request' 
- * để khớp với chuẩn của Express Router.
- */
 export const auth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
@@ -27,7 +20,6 @@ export const auth = async (req: Request, res: Response, next: NextFunction) => {
     const token = authHeader.split(" ")[1];
     const decodedToken = await firebaseAuth.verifyIdToken(token);
 
-    // Ép kiểu req thành AuthRequest để gán user
     (req as AuthRequest).user = decodedToken;
 
     next();
@@ -39,9 +31,6 @@ export const auth = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 
-/**
- * Middleware Optional Auth
- */
 export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
@@ -50,7 +39,6 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
       const token = authHeader.split(" ")[1];
       const decodedToken = await firebaseAuth.verifyIdToken(token);
 
-      // Ép kiểu để gán
       (req as AuthRequest).user = decodedToken;
     }
 
@@ -60,9 +48,6 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
-/**
- * Middleware Admin
- */
 export const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = (req as AuthRequest).user;
@@ -74,10 +59,8 @@ export const isAdmin = async (req: Request, res: Response, next: NextFunction) =
 
     console.log("[Admin Check] Đang kiểm tra UID:", user.uid);
 
-    // Truy vấn Firestore
     const userDoc = await firebaseDB.collection('users').doc(user.uid).get();
 
-    // LOG QUAN TRỌNG: Xem tìm thấy gì trong DB
     console.log("[Admin Check] Tìm thấy trong DB?", userDoc.exists);
     if (userDoc.exists) {
       console.log("[Admin Check] Data:", userDoc.data());

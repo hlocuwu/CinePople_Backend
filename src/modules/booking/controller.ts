@@ -170,12 +170,11 @@ export const createBooking = async (req: Request, res: Response, next: NextFunct
  */
 export const getAllBookings = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Gọi service lấy tất cả
     const bookings = await bookingService.getAllBookings();
 
     res.status(200).json({
       success: true,
-      count: bookings.length, // Thêm count để tiện theo dõi
+      count: bookings.length, 
       data: bookings
     });
   } catch (error) {

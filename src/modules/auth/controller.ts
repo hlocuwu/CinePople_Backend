@@ -1,6 +1,6 @@
-import { Request, Response } from "express"; // Dùng Request thường
+import { Request, Response } from "express";
 import { AuthService } from "./service";
-import { AuthRequest } from "../../middleware/auth"; // Import để ép kiểu bên trong
+import { AuthRequest } from "../../middleware/auth"; 
 
 const authService = new AuthService();
 
@@ -50,7 +50,6 @@ const authService = new AuthService();
  */
 export async function loginAndSync(req: Request, res: Response) {
   try {
-    // Ép kiểu bên trong hàm
     const userToken = (req as AuthRequest).user;
 
     if (!userToken) {
