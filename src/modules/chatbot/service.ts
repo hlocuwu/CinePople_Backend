@@ -1,59 +1,71 @@
 import axios from "axios";
-import { Firestore } from "firebase-admin/firestore"; 
+import { firebaseDB } from "../../config/firebase";
 
 export const generateResponse = async (message: string): Promise<string> => {
     const apiKey = process.env.HF_TOKEN;
     if (!apiKey) {
-        throw new Error("HF_TOKEN is missing");
+        console.warn("Thiếu HF_TOKEN, trả về câu mặc định.");
+        return "Xin lỗi bạn, hệ thống tư vấn đang bảo trì một chút ạ! 🍿";
     }
 
-    const dbContext = new Firestore(); 
-    const _collectionRef = dbContext.collection('cinema_knowledge_base');
-
-    const MODEL_ID = "google/gemma-2-2b-it";
-    const url = "https://router.huggingface.co/v1/chat/completions";
-
-    const SYSTEM_PROMPT = `
-    BẠN LÀ MỘT CHUYÊN GIA ĐIỆN ẢNH VÀ LÀ NHÂN VIÊN XUẤT SẮC CỦA RẠP CHIẾU PHIM.
-    
-    1. NHIỆM VỤ CHÍNH:
-       - Tư vấn phim đang chiếu, review nội dung phim (không spoil), tư vấn giá vé và bắp nước.
-       - Luôn tỏ ra hào hứng, thân thiện và sử dụng các emoji liên quan đến phim ảnh (🎬, 🍿, 🎟️, ⭐).
-       - Khuyến khích khách hàng đặt vé ngay để có chỗ ngồi đẹp.
-
-    2. QUY TẮC CẤM (TUYỆT ĐỐI TUÂN THỦ):
-       - BẠN KHÔNG PHẢI LÀ GIÁO SƯ TOÁN HAY KỸ SƯ.
-       - TUYỆT ĐỐI KHÔNG trả lời các câu hỏi về Toán học (ví dụ: 1+1=?, giải phương trình...), Lập trình, Chính trị hay Xã hội học.
-       - Nếu người dùng hỏi những câu không liên quan đến phim/rạp, hãy trả lời theo mẫu: 
-         "Xin lỗi bạn nha, mình chỉ là nhân viên bán vé thôi nên chỉ biết về phim ảnh chứ không biết tính toán hay làm việc khác đâu ạ! 😅🍿 Quay lại chuyện phim nhé?"
-
-    3. NGÔN NGỮ:
-       - Hỏi Tiếng Việt -> Trả lời Tiếng Việt.
-       - Hỏi Tiếng Anh -> Trả lời Tiếng Anh.
-    
-    4. VÍ DỤ ỨNG XỬ:
-       - User: "1 + 1 bằng mấy?" -> AI: "Ui câu này khó quá, mình chỉ biết 1 vé + 1 bắp = Combo tuyệt vời thôi ạ! 🍿"
-       - User: "Viết code Java" -> AI: "Mình không phải lập trình viên đâu, mình là mọt phim chính hiệu mà! Xem phim gì không bạn?"
-    `;
-
     try {
+        const [moviesSnap, cinemasSnap] = await Promise.all([
+            firebaseDB.collection('movies').where('status', '==', 'now_showing').get(),
+            firebaseDB.collection('cinemas').get()
+        ]);
+
+        const moviesContext = moviesSnap.empty 
+            ? "Hiện chưa có phim nào đang chiếu." 
+            : moviesSnap.docs.map(doc => {
+                const data = doc.data() as any;
+                return `- Phim: "${data.title}" (Thể loại: ${data.genres?.join(', ')}, Thời lượng: ${data.duration} phút)`;
+              }).join("\n");
+
+        const cinemasContext = cinemasSnap.empty
+            ? "Chưa có rạp nào."
+            : cinemasSnap.docs.map(doc => {
+                const data = doc.data() as any;
+                return `- Rạp: "${data.name}" (Địa chỉ: ${data.address})`;
+              }).join("\n");
+
+        const SYSTEM_PROMPT = `
+        BẠN LÀ MỘT CHUYÊN GIA ĐIỆN ẢNH VÀ LÀ NHÂN VIÊN XUẤT SẮC CỦA RẠP CHIẾU PHIM.
+        
+        DƯỚI ĐÂY LÀ DỮ LIỆU THỰC TẾ TỪ HỆ THỐNG (HÃY SỬ DỤNG ĐỂ TRẢ LỜI):
+        ===========================================
+        [DANH SÁCH PHIM ĐANG CHIẾU]:
+        ${moviesContext}
+
+        [DANH SÁCH RẠP HIỆN CÓ]:
+        ${cinemasContext}
+        ===========================================
+
+        1. NHIỆM VỤ CHÍNH:
+           - Chỉ tư vấn các phim CÓ trong danh sách trên. Nếu khách hỏi phim khác, hãy khéo léo bảo rạp hiện chưa chiếu.
+           - Review nội dung phim ngắn gọn, hấp dẫn (dựa trên tên phim và thể loại).
+           - Luôn tỏ ra hào hứng, dùng emoji (🎬, 🍿, 🎟️).
+
+        2. QUY TẮC CẤM:
+           - KHÔNG trả lời Toán, Code, Chính trị.
+           - Nếu bị hỏi lạc đề: "Dạ em chỉ bán vé thôi, mình quay lại chuyện phim nha! 😅"
+
+        3. NGÔN NGỮ:
+           - User hỏi tiếng nào trả lời tiếng đó.
+        `;
+
+        const MODEL_ID = "google/gemma-2-2b-it";
+        const url = "https://router.huggingface.co/v1/chat/completions";
+
         const response = await axios.post(
             url,
             {
                 model: MODEL_ID,
                 messages: [
-                    {
-                        role: "system",
-                        content: SYSTEM_PROMPT
-                    },
-                    {
-                        role: "user",
-                        content: message
-                    }
+                    { role: "system", content: SYSTEM_PROMPT },
+                    { role: "user", content: message }
                 ],
-                max_tokens: 400,
-                temperature: 0.6,
-                top_p: 0.9
+                max_tokens: 500, // Tăng lên xíu để nó chém gió thoải mái hơn
+                temperature: 0.7,
             },
             {
                 headers: {
@@ -64,17 +76,11 @@ export const generateResponse = async (message: string): Promise<string> => {
         );
 
         const data: any = response.data;
-
-        const text =
-            data?.choices?.[0]?.message?.content ||
-            "Hệ thống rạp đang bảo trì, vui lòng thử lại sau giây lát! 🎬";
-
-        return text;
+        return data?.choices?.[0]?.message?.content || "Hệ thống đang bận xíu, bạn hỏi lại nha! 🎬";
 
     } catch (err: any) {
-        // Log lỗi giả vờ như có lỗi DB để giảng viên tin (nếu cần show log)
-        // console.error("Firestore connection unstable, fallback to AI model...");
-        console.error("HF Error:", err.response?.data || err.message);
-        throw new Error("HF API error");
+        console.error("AI Service Error:", err.message);
+        // Fallback an toàn
+        return "Ui mạng bên em đang lag quá, bạn chờ xíu rồi hỏi lại nha! 🍿";
     }
 };
